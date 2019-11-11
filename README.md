@@ -8,10 +8,9 @@
 
 ./sequence/
 
-## Demo script
-
+## Try it
 
 ```
->> p = getParams;   % Defines inner-volume, acquisition matrix, and other experimental parameters.
->> demo(p);
+>> p = getParams('demo');   % Defines inner-volume, acquisition matrix, and other experimental parameters.
+>> main(p);
 ```
