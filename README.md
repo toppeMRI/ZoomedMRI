@@ -7,3 +7,11 @@
 ./tipupPulse/
 
 ./sequence/
+
+## Demo script
+
+./demo.m
+
+```
+>> demo;
+```
