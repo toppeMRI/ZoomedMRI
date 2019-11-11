@@ -10,8 +10,8 @@
 
 ## Demo script
 
-./demo.m
 
 ```
->> demo;
+>> p = getParams;   % Defines inner-volume, acquisition matrix, and other experimental parameters.
+>> demo(p);
 ```
