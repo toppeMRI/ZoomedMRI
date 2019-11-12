@@ -1,5 +1,7 @@
 # ZoomedMRI
 
+UNDER CONSTRUCTION
+
 ./shimming/
 
 ./IVpulse/
