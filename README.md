@@ -4,9 +4,7 @@ UNDER CONSTRUCTION
 
 ./shimming/
 
-./IVpulse/
-
-./tipupPulse/
+./RFdesign/
 
 ./sequence/
 
