@@ -1,4 +1,4 @@
-function spectralRF_jfn(Trf,TE,signOfTargetPhase,lambda,type,varargin)
+function [b1,mxy] = spectralRF_jfn(Trf,TE,signOfTargetPhase,lambda,type,varargin)
 % function spectralRF_jfn(Trf,TE,signOfTargetPhase,lambda,type,varargin)
 %
 % Inputs
