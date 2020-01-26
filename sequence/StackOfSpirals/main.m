@@ -1,23 +1,32 @@
-function main
-% Create stack-of-spirals TOPPE sequence.
-% This script creates 'readout.mod' and 'spoiler.mod'
-% It is assumed the excitation files 'tipdown.mod' and 'tipup.mod' 
-% already reside in this folder
+function main(seq)
+% Create stack-of-spirals, RF-spoiled STFR sequence in TOPPE format.
+%
+% This script creates the following files:
+%  'fatsat.mod' 
+%  'readout.mod' 
+%  'spoiler.mod' 
+%  'modules.txt'
+%  'scanloop.txt'
+%
+% It is assumed that the excitation module files 'tipdown.mod' and 'tipup.mod' 
+% have already been created and reside in this folder.
 
 % Usage:
-%  >> addpath ..
 %  >> seq = getparams();
 %  >> main(seq);
 
 %% Create modules.txt
+% File lists the various .mod files that are to be referenced in scanloop.otxt
 % Entries are tab-separated.
 modFileText = ['' ...
 'Total number of unique cores\n' ...
 '3\n' ...
 'fname	duration(us)	hasRF?	hasDAQ?\n' ...
+'fatsat.mod	0	1	0\n' ...
+'tipdown.mod	0	1	0\n' ...
 'readout.mod	0	0	1\n' ...
 'fatsat.mod	0	1	0\n' ...
-'tipdown.mod	0	1	0' ];
+'tipup.mod	0	1	0' ];
 fid = fopen('modules.txt', 'wt');
 fprintf(fid, modFileText);
 fclose(fid);
@@ -25,35 +34,14 @@ fclose(fid);
 
 %% Create (balanced) stack-of-spirals readout leaf. Isotropic resolution.
 
-[g,roInfo] = toppe.utils.spiral.makesosreadout(seq.fmri.fov, seq.fmri.matrix, ...
-	seq.fmri.nLeafs, 0.99*seq.sys.maxSlew, 'system', seq.sys, 'ofname', 'readout.mod', ...
-	'rewDerate', 0.7, 'inout', 'in');
+[g,roInfo] = toppe.utils.spiral.makesosreadout(seq.fov, seq.matrix, seq.nLeafs, seq.sys.maxSlew, ...
+	'system', seq.sys, ...
+	'ofname', 'readout.mod', ...
+	'rewDerate', 0.7, ...
+	'inout', 'in');
 readoutDur = seq.sys.raster*1e3*length(roInfo.sampWin);  % msec
 sampWin = roInfo.sampWin;
 
-
-%% Create slab-selective excitation (tipdown.mod). Include (PRESTO) spoiler gradients.
-
-[rf,gex,tipdown.freq] = toppe.utils.rf.makeslr(seq.fmri.flip, seq.fmri.slabThick, seq.rf.tbw, seq.rf.dur, 0, ...
-                                  'ftype', seq.rf.ftype, 'system', seq.sys, 'writeModFile', false);
-
-% Create spoiler (PRESTO) gradients.
-% Will be placed on two axes for best (RF) spoiling.
-nCyclesSpoil = 1;   % Gives near-optimal temporal SNR, and not so large (see one of my ISMRM abstracts, 2017 I think) 
-gspoil1 = toppe.utils.makecrusher(seq.fmri.nCyclesSpoil, seq.fmri.res(3), 0, 0.7*seq.sys.maxSlew, seq.sys.maxGrad);
-gspoil2 = toppe.utils.makecrusher(2*seq.fmri.nCyclesSpoil, seq.fmri.res(3), 0, 0.5*seq.sys.maxSlew, seq.sys.maxGrad);
-
-% create tipdown.mod
-rf = [0*gspoil2(:); zeros(2,1); rf(:); 0*gspoil1(:)];
-gx = [1*gspoil2(:); zeros(2,1); 0*gex(:);  -gspoil1(:)];
-gy = [0*gspoil2(:); zeros(2,1); 0*gex(:); 0*gspoil1(:)];
-gz = [1*gspoil2(:); zeros(2,1); gex(:);  -gspoil1(:)];
-rf = toppe.utils.makeGElength(rf);
-gx = toppe.utils.makeGElength(gx);
-gy = toppe.utils.makeGElength(gy);
-gz = toppe.utils.makeGElength(gz);
-toppe.writemod('rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', 'tipdown.mod', ...
-               'desc', 'RF slab excitation with PRESTO gradients', 'system', seq.sys);
 
 %% Create fat saturation pulse
 % bw = 500 Hz. Frequency offset (-440 Hz) is set in scanloop.txt.
@@ -61,7 +49,8 @@ seq.fatsat.flip = 50;
 slThick = 1e5;     % dummy value (determines slice-select gradient, but we won't use it). Just needs to be large to reduce dead time before+after rf pulse
 seq.fatsat.tbw = 1.5;
 seq.fatsat.dur = 3;            % pulse duration (msec)
-toppe.utils.rf.makeslr(seq.fatsat.flip, seq.fatsat.slThick, seq.fatsat.tbw, seq.fatsat.dur, 1e-8, ...
+flip = 90;
+toppe.utils.rf.makeslr(flip, seq.fatsat.slThick, seq.fatsat.tbw, seq.fatsat.dur, 1e-8, ...
                        'ftype', 'ls', 'type', 'ex', 'ofname', 'fatsat.mod', 'system', seq.sys);
 
 %% Create scanloop.txt
