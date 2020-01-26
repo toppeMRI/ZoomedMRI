@@ -29,6 +29,7 @@ Add the `toppe` folder to your Matlab path.
 
 ```
 >> cd StackOfSpirals;
+>> % edit main.m as needed (FOV, matrix size, etc)
 >> main;
 ```
 
