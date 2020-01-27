@@ -6,7 +6,7 @@ For a description of TOPPE, see https://toppemri.github.io/
 
 # REQUIREMENTS
 
-## Module files that must exist in the (StackOfSpirals) subfolder:
+## Module files that must exist in the StackOfSpirals subfolder:
 
 - `tipdown.mod`: 3D tailored inner-volume excitation pulse. See ../RFdesign/tipdown/
 - `tipup.mod`: Spectrally-selective tip-up pulse. See ../RFdesign/tipup/
@@ -28,7 +28,7 @@ Add the `toppe` folder to your Matlab path.
 
 ```
 >> cd StackOfSpirals;
->> % edit main.m as needed (FOV, matrix size, etc)
+>> % edit getparams.m as needed (FOV, matrix size, etc)
 >> main;
 ```
 
@@ -48,8 +48,8 @@ Creates the following files:
 ## Preview the sequence in movie (loop) mode
 
 ```
->> nModulesPerTR = 4;
->> toppe.playseq(nModulesPerTR);
+>> nModulesPerTR = 6;
+>> toppe.playseq(nModulesPerTR, 'tpause', 0.1);
 ```
 
 ## Execute
