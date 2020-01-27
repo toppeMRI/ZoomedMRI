@@ -1,9 +1,17 @@
 
-% First design a 'pre-phasing' pulse
-Trf = 2e-3;    % RF pulse duration (sec)
-TE  = 3e-3;    % TE (sec) (determines target excitation)
-b1 = spectralRF(2e-3, 5e-3, -1, 0.6, 'tipdown', 'Tfree', 5e-3);
+% First design a 'pre-phasing' pulse so we can
+% understand what the pulse is doing.
+Trf = 2e-3;               % RF pulse duration (sec)
+TE  = 3e-3;               % TE (sec) (determines target excitation)
+signOfTargetPhase = -1;   % 'pre-phasing'
+lambda = 0.6;             % regularization paramter
+b1 = spectralRF(Trf, TE, signOfTargetPhase, lambda, 'tipdown');
 
+% Design a tipup pulse for an STFR sequence with free precession time 5e-3 s: 
+Tfree = 5e-3;  % s
+signOfTargetPhase = +1;   % 'post-phasing'
+figure;
+b1 = spectralRF(Trf, Tfree, signOfTargetPhase, lambda, 'tipup');
 
 return;
 
