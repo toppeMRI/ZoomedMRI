@@ -1,12 +1,13 @@
-function [b1,mxy] = spectralRF(Trf,TE,signOfTargetPhase,lambda,type,varargin)
+function [b1,mxy] = spectralRF(Trf,TE,wn,signOfTargetPhase,lambda,type,varargin)
 % function spectralRF(Trf,TE,signOfTargetPhase,lambda,type,varargin)
 %
 % Inputs
-%   Trf                 [1 1]     pulse duration (sec)
-%   TE                  [1 1]     target TE (sec)
-%   signOfTargetPhase   +1 or -1  For minimal T2*-weighting (bSSFP-like contrast) when used as tip-up pulse in STFR, set to +1
-%   lambda              [1 1]     Tikhonov regularization constant (0.6 or 1.0 seems to work well)
-%   type                [string]  'tipdown' or 'tipup'
+%   Trf                 [1 1]       pulse duration (sec)
+%   TE                  [1 1]       target TE (sec)
+%   wn                  [1 nfreq]   target frequency range (Hz)
+%   signOfTargetPhase   +1 or -1    For minimal T2*-weighting (bSSFP-like contrast) when used as tip-up pulse in STFR, set to +1
+%   lambda              [1 1]       Tikhonov regularization constant (0.6 or 1.0 seems to work well)
+%   type                [string]    'tipdown' or 'tipup'
 % Options:
 %   Tfree     [1 1]     free precession time (sec). Default: Tfree = TE.
 %   fmt       [string]  plot formatting string. Default: 'b'.
@@ -37,7 +38,7 @@ if abs(signOfTargetPhase) ~= 1
 end
 
 %% Target frequency range
-wn = [-20:0.1:20]';             % Hz
+%wn = [-20:0.1:20]';             % Hz
 
 %% Target frequency response
 flip = 15;      % degrees
