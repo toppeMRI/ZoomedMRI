@@ -1,15 +1,17 @@
 function main(seq)
-% Create stack-of-spirals, RF-spoiled STFR sequence in TOPPE format.
+% Create dynamic 3D stack-of-spirals, RF-spoiled STFR sequence in TOPPE format.
 %
 % This script creates the following files:
-%  'fatsat.mod' 
-%  'readout.mod' 
-%  'spoiler.mod' 
 %  'modules.txt'
+%  'readout.mod' 
+%  'fatsat.mod' 
+%  'spoiler.mod' 
 %  'scanloop.txt'
 %
 % It is assumed that the excitation module files 'tipdown.mod' and 'tipup.mod' 
 % have already been created and reside in this folder.
+% You can design those waveforms any way you like, then use 'toppe.writemod'
+% to write them to .mod files.
 
 % Usage:
 %  >> seq = getparams();
@@ -23,174 +25,99 @@ modFileText = ['' ...
 '3\n' ...
 'fname	duration(us)	hasRF?	hasDAQ?\n' ...
 'fatsat.mod	0	1	0\n' ...
+'spoiler.mod	0	0	0\n' ...
 'tipdown.mod	0	1	0\n' ...
 'readout.mod	0	0	1\n' ...
-'fatsat.mod	0	1	0\n' ...
 'tipup.mod	0	1	0' ];
 fid = fopen('modules.txt', 'wt');
 fprintf(fid, modFileText);
 fclose(fid);
 
 
-%% Create (balanced) stack-of-spirals readout leaf. Isotropic resolution.
-
+%% Create readout.mod. (balanced) stack-of-spirals readout leaf. Isotropic resolution.
 [g,roInfo] = toppe.utils.spiral.makesosreadout(seq.fov, seq.matrix, seq.nLeafs, seq.sys.maxSlew, ...
-	'system', seq.sys, ...
 	'ofname', 'readout.mod', ...
+	'system', seq.sys, ...
 	'rewDerate', 0.7, ...
 	'inout', 'in');
 readoutDur = seq.sys.raster*1e3*length(roInfo.sampWin);  % msec
 sampWin = roInfo.sampWin;
 
 
-%% Create fat saturation pulse
-% bw = 500 Hz. Frequency offset (-440 Hz) is set in scanloop.txt.
-seq.fatsat.flip = 50;
+%% Create fatsat.mod 
 slThick = 1e5;     % dummy value (determines slice-select gradient, but we won't use it). Just needs to be large to reduce dead time before+after rf pulse
-seq.fatsat.tbw = 1.5;
-seq.fatsat.dur = 3;            % pulse duration (msec)
 flip = 90;
-toppe.utils.rf.makeslr(flip, seq.fatsat.slThick, seq.fatsat.tbw, seq.fatsat.dur, 1e-8, ...
+toppe.utils.rf.makeslr(flip, slThick, seq.fatsat.tbw, seq.fatsat.dur, 1e-8, ...
                        'ftype', 'ls', 'type', 'ex', 'ofname', 'fatsat.mod', 'system', seq.sys);
 
+%% Create spoiler.mod
+gspoil = toppe.utils.makecrusher(seq.nCyclesSpoil, seq.res(1), 0, 0.7*seq.sys.maxSlew/sqrt(2), seq.sys.maxGrad/sqrt(2));
+toppe.writemod('ofname', 'spoiler.mod', 'gx', gspoil, 'gz', gspoil, 'system', seq.sys);
+
+
 %% Create scanloop.txt
-nz = seq.fmri.matrix(3);
 
-% fully sampled kz sampling pattern
-for ii = 1:nz
-	kzFull(ii) = ((ii-1+0.5)-nz/2)/(nz/2);    % scaling is (-1 1)
-end
+% define various loop variables
+nz = seq.matrix(3);        % number of kz-encodes
+rfphs = 0;                 % RF phase variable (to be updated in loop) (radians)
+rfSpoilSeedCnt = 0;        % RF 'shot' counter
 
-% undersampled kz sampling pattern
-if 0
-	% Variable-density (non-Cartesian) kz undersampling. May be useful later.
-	Rz = nz/nz_samp;               % kz acceleration factor
-	kz = vardenskz(nz,Rz,3.3);    % Fully sampled center with quadratically increasing FOV outside center. Last argument is FOV(kz=0)/FOV(kzmax). 
-	a_gz_max = abs((0.5-nz/2)/(nz/2));
-	kzU = kz*a_gz_max;     % scaling is (-1 1)
-else
-	% Cartesian variable-density kz undersampling
-	%load zInd;
-	%kzU = kzFull(logical(zInd));
-end
-
-rfphs = 0;              % radians
-rfphsLast = rfphs;
-daqphs = 0;
-rf_spoil_seed_cnt = 0;
-
-% loop over (undersampled) time frames and fill in scanloop.txt,
-% and write k-space values to file
-if seq.writeKspace
-	[rf,gx,gy] = toppe.readmod('readout.mod');  % one spiral leaf
-	[kx1,ky1] = toppe.utils.g2k([gx(:,1) gy(:,1)],1);
-	k1 = complex(kx1,ky1);  % single spiral 'prototype'
-	ndat = size(k1,1);
-	necho = 1;
-	ksp.kx = NaN*ones(ndat, nz, necho, seq.fmri.nframes);   % to match the 'slice-echo-view' order of 'dat' array returned by toppe.utils.loadpfile
-	ksp.ky = ksp.kx;
-	ksp.kz = ksp.kx;
-end
-
-fprintf('Writing scanloop.txt for fMRI sequence\n');
-
-toppe.write2loop('setup', 'version', 3);
-
-for iframe = (-seq.fmri.ndisdaq+1):seq.fmri.nframes
-	if ~mod(iframe,10)
-		fprintf([repmat('\b',1,20) sprintf('%d of %d', iframe+seq.fmri.ndisdaq, seq.fmri.nframes+seq.fmri.ndisdaq )]);
-	end
-
-	% Set kz sampling pattern for this frame.
-	kz1 = kzFull;
-
-	% set 'view' data storage index
-	if iframe < 1 
-		dabmode = 'off';
-	else
-		dabmode = 'on';
-	end
-
+% scan loop (dynamic 3D stack-of-spirals)
+toppe.write2loop('setup', 'version', 3);                    % Initialize 'scanloop.txt'
+for iframe = 1:seq.nframes                                  % temporal frame index
 	for iz = 1:nz
+		a_gz = ((iz-1+0.5)-nz/2)/(nz/2);                      % z phase-encode amplitude, scaled to (-1,1) range
 
-		a_gz = ((iz-1+0.5)-nz/2)/(nz/2);   % z phase-encode amplitude, scaled to (-1,1) range
+		for ileaf = 1:seq.nLeafs
+			% Fat saturation
+  	 		toppe.write2loop('fatsat.mod', 'RFphase', rfphs, ...
+				'Gamplitude', [0 0 0]', ...                        % Turn off any gradients that may exist in fatsat.mod
+				'RFoffset', seq.fatsat.freqOffset);                % -440 Hz at 3T
+  	 		toppe.write2loop('spoiler.mod');                      % Crush the fat we just excited
 
-		for ileaf = 1:seq.fmri.nLeafs
-			if seq.fmri.doFatsat
-  	 			toppe.write2loop('fatsat.mod', 'RFphase', rfphs, 'Gamplitude', [0 0 0]', ...
-					'RFoffset', seq.fatsat.freqOffset);
-				% rfphs = rfphs + (seq.fmri.rf_spoil_seed/180 * pi)*rf_spoil_seed_cnt ;  % radians
-				% rf_spoil_seed_cnt = rf_spoil_seed_cnt + 1;
-			end
+   		% Inner-volume excitation
+   		toppe.write2loop('tipdown.mod', 'RFphase', rfphs);
 
-   		% rf excitation module (includes PRESTO gradients)
-   		toppe.write2loop('tipdown.mod', 'RFphase', rfphs, ...
-					'rotmat',   seq.rotmat, ...
-					'RFoffset', round(tipdown.freq));
+   		% Data acquisition (readout). 
+			% Data is stored in 'slice', 'echo', and 'view' indeces (GE-specific).
+			% We 'cram' both the temporal and spiral leaf indeces into the 'view' index
+			view = (max(iframe,1)-1)*seq.nLeafs + ileaf;               % A bit awkward but it works
+			phi = 2*pi*(ileaf-1)/seq.nLeafs;                           % leaf rotation angle (radians)
+   		toppe.write2loop('readout.mod', 'DAQphase', rfphs, ...     % Receive phase must match RF phase
+				'slice', iz, 'echo', 1, 'view', view, ...
+				'rotmat', seq.rotmat, ...                               % prescribed scan plane rotation (logical frame)
+				'rot',    phi, ...                                      % in-plane rotation (in logical frame)
+				'dabmode', 'on',...
+				'Gamplitude', [1 1 a_gz]');
 
-   		% readout. Data is stored in 'slice', 'echo', and 'view' indeces.
-			slice = iz;
-			echo = 1;
-			view = (max(iframe,1)-1)*seq.fmri.nLeafs + ileaf;
-			phi = 2*pi*(ileaf-1)/seq.fmri.nLeafs;                 % leaf rotation angle (radians)
-   		toppe.write2loop('readout.mod', 'DAQphase', rfphsLast, ...
-				'slice', slice, 'echo', echo, 'view', view, ...
-				'rotmat', seq.rotmat, ...        % prescribed scan plane rotation (logical frame)
-				'rot',    phi, ...               % in-plane rotation (in logical frame)
-				'dabmode', dabmode, 'Gamplitude', [1 1 a_gz]');
+			% Tip-up pulse and spoiler
+   		toppe.write2loop('tipup.mod', 'RFphase', rfphs);           % Tip-up phase must match tip-down phase
+  	 		toppe.write2loop('spoiler.mod');                           % Crush any transverse signal left over from tip-up pulse
 
 	   	% update rf phase (RF spoiling)
-			rfphsLast = rfphs;
-			rfphs = rfphs + (seq.fmri.rf_spoil_seed/180 * pi)*rf_spoil_seed_cnt ;  % radians
-			rf_spoil_seed_cnt = rf_spoil_seed_cnt + 1;
-
-			% kspace info for this TR
-			if strcmp(dabmode, 'on') & seq.writeKspace
-				k1tmp = k1.*exp(1i*phi)*seq.fmri.fov(1)/seq.fmri.matrix(1);         % convert from cycles/cm to cycles/sample
-				ksp.kx(:,slice,echo,view) = real(k1tmp);
-				ksp.ky(:,slice,echo,view) = imag(k1tmp);
-				ksp.kz(:,slice,echo,view) = kz1(iz)/2;         % cycles/sample
-			end
-
-			ksp.kinfo(slice,echo,view).ileaf = ileaf;     % might come in handy
-			ksp.kinfo(slice,echo,view).rot = phi;         % this too
+			rfphs = rfphs + (seq.rfSpoilSeed/180 * pi)*rfSpoilSeedCnt ;  % radians
+			rfSpoilSeedCnt = rfSpoilSeedCnt + 1;
 		end
 	end
 end
-fprintf('\n');
 toppe.write2loop('finish');
 
-%% Save k-space trajectory and other sequence info 
-if seq.writeKspace
-	ksp.kx = single(ksp.kx);
-	ksp.ky = single(ksp.ky);
-	ksp.kz = single(ksp.kz);
-	fprintf('Writing ksp.mat...');
-	%save -v7.3 ksp ksp
-	save ksp ksp
-	fprintf('done\n');
-	kspfile = 'ksp.mat';
-else
-	kspfile = '';
-end
-
-%% create tar file
-system(sprintf("tar czf scan,fmri.tgz ../getparams.m *.m *.mod modules.txt scanloop.txt %s", kspfile));
-
-fprintf('Scan time for 3D spiral fmri sequence: %.2f min\n', toppe.getscantime/60);
-
-%% display sequence
+%% Pre-view sequence
 %toppe.playseq(2, 'tpause', 0.1);
 
-%% convert to Pulseq
-if 0
+
+%% Execute sequence on scanner
+
+% GE
+% Copy the .mod files, modules.txt, and scanloop.txt to /usr/g/bin/ on scanner and scan with toppev3
+
+% Siemens
+% Convert to .seq file using 'ge2seq.m' (WIP)
+% Example:
 % addpath ~/gitlab/toppe/pulseq/
-cd tar
-ge2seq('scan.tar');
-seq = mr.Sequence();
-seq.read('out.seq');
-seq.plot_sg('TimeRange', [10 10.05]);
-cd ..
-end
+% ge2seq('scan.tar');    % scan.tar contains the .mod files, modules.txt, and scanloop.txt
+% seq = mr.Sequence();
+% seq.read('out.seq');
+% seq.plot_sg('TimeRange', [10 10.05]);
 
 

@@ -24,7 +24,6 @@ Add the `toppe` folder to your Matlab path.
 
 # USAGE
 
-
 ## Create the TOPPE sequence files
 
 ```
