@@ -4,7 +4,7 @@ dosetup;
 % design RF pulse and save to 'rfpulse.mat'
 %main_ktCont; 
 
-% load pulse and pad with zeros at beginning and end (TOPPE requires this)
+% load pulse
 load rfpulse;
 
 % set scanner hardware specs
@@ -14,7 +14,7 @@ sys = toppe.systemspecs('maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
 
 % try to write to file
 % toppe.writemod('rf', b1, 'gx', gx, 'gy', gy, 'gz', gz, 'system', sys, 'ofname', 'tipdown.mod');
-% fails! Because TOPPE requires all waveforms to:
+% Fails! Because TOPPE requires all waveforms to:
 % (1) start and end at zero, and (2) be on a 4-sample (16us) boundary
 
 b1 = [0; b1; 0];
