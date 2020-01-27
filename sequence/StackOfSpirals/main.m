@@ -1,4 +1,4 @@
-function main(seq)
+function main
 % Create dynamic 3D stack-of-spirals, RF-spoiled STFR sequence in TOPPE format.
 %
 % This script creates the following files:
@@ -13,9 +13,7 @@ function main(seq)
 % You can design those waveforms any way you like, then use 'toppe.writemod'
 % to write them to .mod files.
 
-% Usage:
-%  >> seq = getparams();
-%  >> main(seq);
+seq = getparams;
 
 %% Create modules.txt
 % File lists the various .mod files that are to be referenced in scanloop.otxt
