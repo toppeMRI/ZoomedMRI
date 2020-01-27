@@ -39,6 +39,7 @@ end
 
 %% Target frequency range
 %wn = [-20:0.1:20]';             % Hz
+wn = wn(:);
 
 %% Target frequency response
 flip = 15;      % degrees
