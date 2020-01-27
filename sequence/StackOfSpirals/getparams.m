@@ -21,12 +21,15 @@ seq.sys = toppe.systemspecs('maxSlew', 12, 'slewUnit', 'Gauss/cm/ms', 'maxGrad',
 % Resolution, FOV, and number of temporal frames
 seq.res = [0.1 0.1 0.1];     % cm
 targetfov  = [22 22 5];      % actual FOV can be slightly different due to rounding to even matrix size
-seq.matrix = [2*round(targetfov(1:2)./seq.res(1:2)/2) round(targetfov(3)/seq.res(3)];
+seq.matrix = [2*round(targetfov(1:2)./seq.res(1:2)/2) round(targetfov(3)/seq.res(3))];
 seq.fov = seq.res .* seq.matrix;
 seq.nframes = 10;
 
 % spiral readout parameters
 seq.nLeafs = 40;              % number of spiral leafs
+
+% number of spoiling cycles across voxel dimension
+seq.nCyclesSpoil = 2;
 
 % fat sat pulse parameters
 % (bandwidth = 500 Hz)
