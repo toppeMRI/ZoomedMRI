@@ -1,4 +1,12 @@
 
+% First design a 'pre-phasing' pulse
+Trf = 2e-3;    % RF pulse duration (sec)
+TE  = 3e-3;    % TE (sec) (determines target excitation)
+b1 = spectralRF(2e-3, 5e-3, -1, 0.6, 'tipdown', 'Tfree', 5e-3);
+
+
+return;
+
 % set scanner hardware specs
 sys = toppe.systemspecs('maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
 	'maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
