@@ -49,7 +49,8 @@ toppe.utils.rf.makeslr(flip, slThick, seq.fatsat.tbw, seq.fatsat.dur, 1e-8, ...
                        'ftype', 'ls', 'type', 'ex', 'ofname', 'fatsat.mod', 'system', seq.sys);
 
 %% Create spoiler.mod
-gspoil = toppe.utils.makecrusher(seq.nCyclesSpoil, seq.res(1), 0, 0.7*seq.sys.maxSlew/sqrt(2), seq.sys.maxGrad/sqrt(2));
+%gspoil = toppe.utils.makecrusher(seq.nCyclesSpoil, seq.res(1), 0, 0.7*seq.sys.maxSlew/sqrt(2), seq.sys.maxGrad/sqrt(2));
+gspoil = toppe.utils.makecrusher(seq.nCyclesSpoil, seq.res(1), 0, seq.sys.maxSlew, seq.sys.maxGrad);
 toppe.writemod('ofname', 'spoiler.mod', 'gx', gspoil, 'gz', gspoil, 'system', seq.sys);
 
 

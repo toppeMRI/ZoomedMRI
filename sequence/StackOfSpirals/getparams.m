@@ -16,7 +16,7 @@ end
 % Hardware limits
 % NB! If passing 'sys' to writemod.m, 'maxGrad' MUST match the physical system limit -- since gradients are scaled relative to this.
 % 'maxSlew' can always be a design choice, i.e., it can be at or below the physical system limit.
-seq.sys = toppe.systemspecs('maxSlew', 12, 'slewUnit', 'Gauss/cm/ms', 'maxGrad', 5, 'gradUnit', 'Gauss/cm'); 
+seq.sys = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', 'maxGrad', 5, 'gradUnit', 'Gauss/cm'); 
 
 % Resolution, FOV, and number of temporal frames
 seq.res = [0.1 0.1 0.1];     % cm
