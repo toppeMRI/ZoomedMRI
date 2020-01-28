@@ -2,17 +2,17 @@
 % First design a 'pre-phasing' pulse so we can
 % understand what the pulse is doing.
 Trf = 2e-3;               % RF pulse duration (sec)
-TE  = 3e-3;               % TE (sec) (determines target excitation)
+TE  = 4e-3;               % TE (sec) (determines target excitation)
 signOfTargetPhase = -1;   % 'pre-phasing'
-lambda = 0.1;             % regularization paramter
+lambda = 1.0;             % regularization parameter
 wn = [-20:0.1:20];        % target frequency range
 b1 = spectralRF(Trf, TE, wn, signOfTargetPhase, lambda, 'tipdown');
 
 % Design a tipup pulse for an STFR sequence with free precession time 5e-3 s: 
 Tfree = 5e-3;  % s
 signOfTargetPhase = +1;   % 'post-phasing'
-%figure;
-%b1 = spectralRF(Trf, Tfree, wn, signOfTargetPhase, lambda, 'tipup');
+figure;
+b1 = spectralRF(Trf, Tfree, wn, signOfTargetPhase, lambda, 'tipup');
 
 % set scanner hardware specs
 sys = toppe.systemspecs('maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
@@ -33,4 +33,4 @@ b1 = [b1; zeros(nextra,1)];
 toppe.writemod('rf', b1, 'system', sys, 'ofname', 'tipup.mod');
 
 % display the .mod file
-toppe.plotmod('tipup.mod');
+%toppe.plotmod('tipup.mod');

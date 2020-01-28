@@ -34,7 +34,7 @@ else
 end
 
 if abs(signOfTargetPhase) ~= 1
-	error('signOfTargetPhase must be 1 or -1');
+%	error('signOfTargetPhase must be 1 or -1');
 end
 
 %% Target frequency range
@@ -66,7 +66,7 @@ b1 = pinv(A'*A+lambda^2*eye(length(t),length(t)))*A'*d;
 %% Simulate
 T1 = 1000; T2 = 80;    % msec
 dt = 4e-3;             % msec
-w = 2*wn(:);           % simulate over this frequency range
+w = 1*wn(:);           % simulate over this frequency range
 
 nfreq = length(w);
 
