@@ -26,7 +26,8 @@ seq.fov = seq.res .* seq.matrix;
 seq.nframes = 10;
 
 % spiral readout parameters
-seq.nLeafs = 40;              % number of spiral leafs
+seq.nLeafs = 8;              % number of spiral leafs
+seq.spiralType = 'out';
 
 % number of spoiling cycles across voxel dimension
 seq.nCyclesSpoil = 2;
